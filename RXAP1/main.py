@@ -43,19 +43,46 @@ for i, value in enumerate(data):
 
 program = [
 
-    # LD HL,4000
-    0x21, 0x00, 0x40,
+    # ==========================================
+    # SBC HL,BC
+    # ==========================================
 
-    # LD DE,5000
-    0x11, 0x00, 0x50,
+    # LD HL,2000
+    0x21, 0x00, 0x20,
 
-    # LD BC,4
-    0x01, 0x04, 0x00,
+    # LD BC,0100
+    0x01, 0x00, 0x01,
 
-    # LDIR
-    0xED, 0xB0,
+    # Clear Carry
+    # XOR A
+    0xAF,
 
+    # SBC HL,BC
+    0xED, 0x42,
+
+
+    # ==========================================
+    # SBC HL,DE
+    # ==========================================
+
+    # LD DE,0020
+    0x11, 0x20, 0x00,
+
+    # SBC HL,DE
+    0xED, 0x52,
+
+
+    # ==========================================
+    # SBC HL,HL
+    # ==========================================
+
+    0xED, 0x62,
+
+
+    # ==========================================
     # HALT
+    # ==========================================
+
     0x76
 ]
 
@@ -91,6 +118,41 @@ print()
 
 cpu.run()
 
+print("HL =", hex(cpu.get_hl()))
+print("BC =", hex(cpu.get_bc()))
+print("DE =", hex(cpu.get_de()))
+print("SP =", hex(cpu.sp))
+print("F  =", hex(cpu.f))
+
+print("B  =", hex(cpu.b))
+print("C  =", hex(cpu.c))
+print("D  =", hex(cpu.d))
+print("E  =", hex(cpu.e))
+print("A  =", hex(cpu.a))
+print("Memory[4000] =", hex(memory.read(0x4000)))
+
+print("DE =", hex(cpu.get_de()))
+print("HL =", hex(cpu.get_hl()))
+print("BC =", hex(cpu.get_bc()))
+
+print("A  =", hex(cpu.a))
+
+print()
+print("Alternate registers:")
+
+print("BC' =", hex(
+    (cpu.reg.b_alt << 8) | cpu.reg.c_alt
+))
+
+print("DE' =", hex(
+    (cpu.reg.d_alt << 8) | cpu.reg.e_alt
+))
+
+print("HL' =", hex(
+    (cpu.reg.h_alt << 8) | cpu.reg.l_alt
+))
+
+print("A'  =", hex(cpu.reg.a_alt))
 
 print("CPU HALTED")
 print()
