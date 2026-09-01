@@ -1,15 +1,9 @@
 from .registers import Registers
 
-from .flags import (
-    S_FLAG,
-    Z_FLAG,
-    Y_FLAG,
-    H_FLAG,
-    X_FLAG,
-    PV_FLAG,
-    N_FLAG,
-    C_FLAG,
-)
+from .cb import execute_cb
+from .ed import execute_ed
+from .indexed import execute_indexed
+from .opcodes import execute_opcode
 
 from hardware.io import IO
 
@@ -31,9 +25,9 @@ class Z80:
         self.halted = False
 
 
-    # ==========================================
-    # REGISTER COMPATIBILITY
-    # ==========================================
+    # ==================================================
+    # REGISTER PROPERTIES
+    # ==================================================
 
     @property
     def a(self):
@@ -170,13 +164,15 @@ class Z80:
         self.reg.im = value
 
 
-    # ==========================================
+    # ==================================================
     # MEMORY
-    # ==========================================
+    # ==================================================
 
     def read_byte(self, address):
 
-        return self.memory.read(address)
+        return self.memory.read(
+            address
+        )
 
 
     def write_byte(self, address, value):
@@ -189,7 +185,9 @@ class Z80:
 
     def fetch_byte(self):
 
-        value = self.read_byte(self.pc)
+        value = self.read_byte(
+            self.pc
+        )
 
         self.pc = (
             self.pc + 1
@@ -209,9 +207,9 @@ class Z80:
         )
 
 
-    # ==========================================
+    # ==================================================
     # REGISTER PAIRS
-    # ==========================================
+    # ==================================================
 
     def get_bc(self):
         return self.reg.get_bc()
@@ -237,9 +235,149 @@ class Z80:
         self.reg.set_hl(value)
 
 
-    # ==========================================
+    # ==================================================
+    # 8-BIT REGISTER ACCESS
+    # ==================================================
+
+    def read_r(self, index):
+
+        index &= 7
+
+        if index == 0:
+            return self.b
+
+        if index == 1:
+            return self.c
+
+        if index == 2:
+            return self.d
+
+        if index == 3:
+            return self.e
+
+        if index == 4:
+            return self.h
+
+        if index == 5:
+            return self.l
+
+        if index == 6:
+
+            return self.read_byte(
+                self.get_hl()
+            )
+
+        if index == 7:
+            return self.a
+
+
+    def write_r(self, index, value):
+
+        index &= 7
+        value &= 0xFF
+
+        if index == 0:
+            self.b = value
+
+        elif index == 1:
+            self.c = value
+
+        elif index == 2:
+            self.d = value
+
+        elif index == 3:
+            self.e = value
+
+        elif index == 4:
+            self.h = value
+
+        elif index == 5:
+            self.l = value
+
+        elif index == 6:
+
+            self.write_byte(
+                self.get_hl(),
+                value
+            )
+
+        elif index == 7:
+            self.a = value
+
+
+    # ==================================================
+    # I/O
+    # ==================================================
+
+    def io_read(self, port):
+
+        return self.io.read(
+            port
+        )
+
+
+    def io_write(self, port, value):
+
+        self.io.write(
+            port,
+            value
+        )
+
+
+    # ==================================================
+    # STACK
+    # ==================================================
+
+    def push_word(self, value):
+
+        value &= 0xFFFF
+
+        self.sp = (
+            self.sp - 1
+        ) & 0xFFFF
+
+        self.write_byte(
+            self.sp,
+            (value >> 8) & 0xFF
+        )
+
+        self.sp = (
+            self.sp - 1
+        ) & 0xFFFF
+
+        self.write_byte(
+            self.sp,
+            value & 0xFF
+        )
+
+
+    def pop_word(self):
+
+        low = self.read_byte(
+            self.sp
+        )
+
+        self.sp = (
+            self.sp + 1
+        ) & 0xFFFF
+
+        high = self.read_byte(
+            self.sp
+        )
+
+        self.sp = (
+            self.sp + 1
+        ) & 0xFFFF
+
+        return (
+            low
+            | (high << 8)
+        )
+
+
+    # ==================================================
     # RESET
-    # ==========================================
+    # ==================================================
 
     def reset(self):
 
@@ -248,9 +386,9 @@ class Z80:
         self.halted = False
 
 
-    # ==========================================
-    # PLACEHOLDER EXECUTION
-    # ==========================================
+    # ==================================================
+    # INSTRUCTION EXECUTION
+    # ==================================================
 
     def step(self):
 
@@ -259,40 +397,95 @@ class Z80:
 
         opcode = self.fetch_byte()
 
-        if opcode == 0x00:
 
-            # NOP
+        # ==================================================
+        # DD PREFIX — IX
+        # ==================================================
+
+        if opcode == 0xDD:
+
+            execute_indexed(
+                self,
+                0xDD
+            )
+
             return
 
 
-        if opcode == 0x76:
+        # ==================================================
+        # FD PREFIX — IY
+        # ==================================================
 
-            # HALT
-            self.halted = True
+        if opcode == 0xFD:
+
+            execute_indexed(
+                self,
+                0xFD
+            )
+
             return
 
 
-        raise NotImplementedError(
-            f"Opcode {opcode:02X} "
-            f"not connected yet at "
-            f"{(self.pc - 1) & 0xFFFF:04X}"
+        # ==================================================
+        # CB PREFIX
+        # ==================================================
+
+        if opcode == 0xCB:
+
+            cb_opcode = self.fetch_byte()
+
+            execute_cb(
+                self,
+                cb_opcode
+            )
+
+            return
+
+
+        # ==================================================
+        # ED PREFIX
+        # ==================================================
+
+        if opcode == 0xED:
+
+            ed_opcode = self.fetch_byte()
+
+            execute_ed(
+                self,
+                ed_opcode
+            )
+
+            return
+
+
+        # ==================================================
+        # NORMAL OPCODES
+        # ==================================================
+
+        execute_opcode(
+            self,
+            opcode
         )
 
 
-    def run(self, max_cycles=1000000):
+    # ==================================================
+    # RUN
+    # ==================================================
 
-        cycles = 0
+    def run(self, max_steps=1_000_000):
+
+        steps = 0
 
         while (
             not self.halted
-            and cycles < max_cycles
+            and steps < max_steps
         ):
 
             self.step()
 
-            cycles += 1
+            steps += 1
 
-        if cycles >= max_cycles:
+        if steps >= max_steps:
 
             raise RuntimeError(
                 "CPU exceeded maximum "
