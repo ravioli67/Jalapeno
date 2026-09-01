@@ -19,7 +19,6 @@ class Z80:
 
         self.memory = memory
 
-        # 8-bit registers
         self.a = 0
         self.f = 0
 
@@ -33,12 +32,10 @@ class Z80:
         # Alternate registers
         self.a_alt = 0
         self.f_alt = 0
-
         self.b_alt = 0
         self.c_alt = 0
         self.d_alt = 0
         self.e_alt = 0
-        self.f_alt = 0
         self.h_alt = 0
         self.l_alt = 0
 
@@ -114,24 +111,23 @@ class Z80:
         return low | (high << 8)
 
     # ==================================================
-    # I/O PORTS
+    # I/O
     # ==================================================
 
     def io_read(self, port):
 
         port &= 0xFFFF
 
-        if port in self.ports:
-            return self.ports[port] & 0xFF
-
-        return 0xFF
+        return self.ports.get(
+            port,
+            0xFF
+        )
 
     def io_write(self, port, value):
 
-        port &= 0xFFFF
-        value &= 0xFF
-
-        self.ports[port] = value
+        self.ports[
+            port & 0xFFFF
+        ] = value & 0xFF
 
     # ==================================================
     # REGISTER PAIRS
@@ -212,12 +208,14 @@ class Z80:
         ) == 0
 
     # ==================================================
-    # 8-BIT ADD
+    # 8-BIT ARITHMETIC
     # ==================================================
 
     def add8(self, a, b, carry=0):
 
-        result = a + b + carry
+        result = (
+            a + b + carry
+        )
 
         value = result & 0xFF
 
@@ -261,13 +259,11 @@ class Z80:
 
         return value
 
-    # ==================================================
-    # 8-BIT SUB
-    # ==================================================
-
     def sub8(self, a, b, carry=0):
 
-        result = a - b - carry
+        result = (
+            a - b - carry
+        )
 
         value = result & 0xFF
 
@@ -312,7 +308,7 @@ class Z80:
         return value
 
     # ==================================================
-    # INC
+    # INC / DEC
     # ==================================================
 
     def inc8(self, value):
@@ -356,10 +352,6 @@ class Z80:
         )
 
         return result
-
-    # ==================================================
-    # DEC
-    # ==================================================
 
     def dec8(self, value):
 
@@ -507,6 +499,7 @@ class Z80:
             return self.l
 
         if code == 6:
+
             return self.read_byte(
                 self.get_hl()
             )
@@ -516,7 +509,6 @@ class Z80:
     def write_r(self, code, value):
 
         code &= 7
-
         value &= 0xFF
 
         if code == 0:
@@ -538,6 +530,7 @@ class Z80:
             self.l = value
 
         elif code == 6:
+
             self.write_byte(
                 self.get_hl(),
                 value
@@ -545,123 +538,6 @@ class Z80:
 
         else:
             self.a = value
-
-    # ==================================================
-    # AUTOMATIC LD DECODER
-    # ==================================================
-
-    def decode_ld_group(self, opcode):
-
-        destination = (
-            (opcode >> 3) & 7
-        )
-
-        source = opcode & 7
-
-        value = self.read_r(
-            source
-        )
-
-        self.write_r(
-            destination,
-            value
-        )
-
-    # ==================================================
-    # AUTOMATIC ALU DECODER
-    # ==================================================
-
-    def decode_alu_group(self, opcode):
-
-        operation = (
-            (opcode >> 3) & 7
-        )
-
-        source = opcode & 7
-
-        value = self.read_r(
-            source
-        )
-
-        if operation == 0:
-
-            self.a = self.add8(
-                self.a,
-                value
-            )
-
-        elif operation == 1:
-
-            carry = int(
-                self.get_flag(
-                    self.FLAG_C
-                )
-            )
-
-            self.a = self.add8(
-                self.a,
-                value,
-                carry
-            )
-
-        elif operation == 2:
-
-            self.a = self.sub8(
-                self.a,
-                value
-            )
-
-        elif operation == 3:
-
-            carry = int(
-                self.get_flag(
-                    self.FLAG_C
-                )
-            )
-
-            self.a = self.sub8(
-                self.a,
-                value,
-                carry
-            )
-
-        elif operation == 4:
-            self.and8(value)
-
-        elif operation == 5:
-            self.xor8(value)
-
-        elif operation == 6:
-            self.or8(value)
-
-        elif operation == 7:
-            self.cp(value)
-
-    # ==================================================
-    # INC / DEC DECODER
-    # ==================================================
-
-    def decode_inc_dec(self, opcode):
-
-        register = (
-            (opcode >> 3) & 7
-        )
-
-        is_dec = opcode & 1
-
-        value = self.read_r(
-            register
-        )
-
-        if is_dec:
-            value = self.dec8(value)
-        else:
-            value = self.inc8(value)
-
-        self.write_r(
-            register,
-            value
-        )
 
     # ==================================================
     # OPCODE TABLE
@@ -672,8 +548,6 @@ class Z80:
         self.opcodes[0x00] = self.op_nop
         self.opcodes[0x76] = self.op_halt
 
-        # LD r,n
-
         self.opcodes[0x3E] = self.op_ld_a_n
         self.opcodes[0x06] = self.op_ld_b_n
         self.opcodes[0x0E] = self.op_ld_c_n
@@ -682,26 +556,18 @@ class Z80:
         self.opcodes[0x26] = self.op_ld_h_n
         self.opcodes[0x2E] = self.op_ld_l_n
 
-        # LD rr,nn
-
         self.opcodes[0x01] = self.op_ld_bc_nn
         self.opcodes[0x11] = self.op_ld_de_nn
         self.opcodes[0x21] = self.op_ld_hl_nn
         self.opcodes[0x31] = self.op_ld_sp_nn
-
-        # Jumps
 
         self.opcodes[0xC3] = self.op_jp_nn
         self.opcodes[0x18] = self.op_jr
         self.opcodes[0x20] = self.op_jr_nz
         self.opcodes[0x28] = self.op_jr_z
 
-        # CALL / RET
-
         self.opcodes[0xCD] = self.op_call
         self.opcodes[0xC9] = self.op_ret
-
-        # PUSH / POP
 
         self.opcodes[0xC5] = self.op_push_bc
         self.opcodes[0xC1] = self.op_pop_bc
@@ -715,14 +581,10 @@ class Z80:
         self.opcodes[0xF5] = self.op_push_af
         self.opcodes[0xF1] = self.op_pop_af
 
-        # Rotates
-
         self.opcodes[0x07] = self.op_rlca
         self.opcodes[0x0F] = self.op_rrca
         self.opcodes[0x17] = self.op_rla
         self.opcodes[0x1F] = self.op_rra
-
-        # Interrupts
 
         self.opcodes[0xF3] = self.op_di
         self.opcodes[0xFB] = self.op_ei
@@ -803,9 +665,7 @@ class Z80:
 
         offset = self.fetch_byte()
 
-        if not self.get_flag(
-            self.FLAG_Z
-        ):
+        if not self.get_flag(self.FLAG_Z):
 
             if offset & 0x80:
                 offset -= 0x100
@@ -818,9 +678,7 @@ class Z80:
 
         offset = self.fetch_byte()
 
-        if self.get_flag(
-            self.FLAG_Z
-        ):
+        if self.get_flag(self.FLAG_Z):
 
             if offset & 0x80:
                 offset -= 0x100
@@ -837,9 +695,7 @@ class Z80:
 
         address = self.fetch_word()
 
-        self.push(
-            self.pc
-        )
+        self.push(self.pc)
 
         self.pc = address
 
@@ -943,20 +799,9 @@ class Z80:
             carry
         ) & 0xFF
 
-        self.set_flag(
-            self.FLAG_H,
-            False
-        )
-
-        self.set_flag(
-            self.FLAG_N,
-            False
-        )
-
-        self.set_flag(
-            self.FLAG_C,
-            bool(carry)
-        )
+        self.set_flag(self.FLAG_H, False)
+        self.set_flag(self.FLAG_N, False)
+        self.set_flag(self.FLAG_C, bool(carry))
 
     def op_rrca(self):
 
@@ -967,27 +812,14 @@ class Z80:
             (carry << 7)
         ) & 0xFF
 
-        self.set_flag(
-            self.FLAG_H,
-            False
-        )
-
-        self.set_flag(
-            self.FLAG_N,
-            False
-        )
-
-        self.set_flag(
-            self.FLAG_C,
-            bool(carry)
-        )
+        self.set_flag(self.FLAG_H, False)
+        self.set_flag(self.FLAG_N, False)
+        self.set_flag(self.FLAG_C, bool(carry))
 
     def op_rla(self):
 
         old_carry = int(
-            self.get_flag(
-                self.FLAG_C
-            )
+            self.get_flag(self.FLAG_C)
         )
 
         carry = (
@@ -999,27 +831,14 @@ class Z80:
             old_carry
         ) & 0xFF
 
-        self.set_flag(
-            self.FLAG_H,
-            False
-        )
-
-        self.set_flag(
-            self.FLAG_N,
-            False
-        )
-
-        self.set_flag(
-            self.FLAG_C,
-            bool(carry)
-        )
+        self.set_flag(self.FLAG_H, False)
+        self.set_flag(self.FLAG_N, False)
+        self.set_flag(self.FLAG_C, bool(carry))
 
     def op_rra(self):
 
         old_carry = int(
-            self.get_flag(
-                self.FLAG_C
-            )
+            self.get_flag(self.FLAG_C)
         )
 
         carry = self.a & 1
@@ -1029,20 +848,9 @@ class Z80:
             (old_carry << 7)
         ) & 0xFF
 
-        self.set_flag(
-            self.FLAG_H,
-            False
-        )
-
-        self.set_flag(
-            self.FLAG_N,
-            False
-        )
-
-        self.set_flag(
-            self.FLAG_C,
-            bool(carry)
-        )
+        self.set_flag(self.FLAG_H, False)
+        self.set_flag(self.FLAG_N, False)
+        self.set_flag(self.FLAG_C, bool(carry))
 
     # ==================================================
     # INTERRUPTS
@@ -1059,7 +867,7 @@ class Z80:
         self.iff2 = True
 
     # ==================================================
-    # FULL CB DECODER
+    # CB PREFIX
     # ==================================================
 
     def execute_cb(self, opcode):
@@ -1074,21 +882,13 @@ class Z80:
 
         register = opcode & 7
 
-        # ------------------------------------------
         # ROTATE / SHIFT
-        # ------------------------------------------
-
         if group == 0:
 
-            value = self.read_r(
-                register
-            )
-
+            value = self.read_r(register)
             carry = 0
 
             if operation == 0:
-
-                # RLC
 
                 carry = (
                     value >> 7
@@ -1101,8 +901,6 @@ class Z80:
 
             elif operation == 1:
 
-                # RRC
-
                 carry = value & 1
 
                 value = (
@@ -1112,12 +910,8 @@ class Z80:
 
             elif operation == 2:
 
-                # RL
-
                 old_carry = int(
-                    self.get_flag(
-                        self.FLAG_C
-                    )
+                    self.get_flag(self.FLAG_C)
                 )
 
                 carry = (
@@ -1131,12 +925,8 @@ class Z80:
 
             elif operation == 3:
 
-                # RR
-
                 old_carry = int(
-                    self.get_flag(
-                        self.FLAG_C
-                    )
+                    self.get_flag(self.FLAG_C)
                 )
 
                 carry = value & 1
@@ -1148,8 +938,6 @@ class Z80:
 
             elif operation == 4:
 
-                # SLA
-
                 carry = (
                     value >> 7
                 ) & 1
@@ -1160,8 +948,6 @@ class Z80:
 
             elif operation == 5:
 
-                # SRA
-
                 carry = value & 1
 
                 value = (
@@ -1170,8 +956,6 @@ class Z80:
                 ) & 0xFF
 
             elif operation == 6:
-
-                # SLL
 
                 carry = (
                     value >> 7
@@ -1183,8 +967,6 @@ class Z80:
                 ) & 0xFF
 
             elif operation == 7:
-
-                # SRL
 
                 carry = value & 1
 
@@ -1221,17 +1003,12 @@ class Z80:
 
             return
 
-        # ------------------------------------------
         # BIT
-        # ------------------------------------------
-
         if group == 1:
 
             bit = operation
 
-            value = self.read_r(
-                register
-            )
+            value = self.read_r(register)
 
             tested = (
                 value &
@@ -1265,17 +1042,12 @@ class Z80:
 
             return
 
-        # ------------------------------------------
         # RES
-        # ------------------------------------------
-
         if group == 2:
 
             bit = operation
 
-            value = self.read_r(
-                register
-            )
+            value = self.read_r(register)
 
             value &= ~(
                 1 << bit
@@ -1288,17 +1060,12 @@ class Z80:
 
             return
 
-        # ------------------------------------------
         # SET
-        # ------------------------------------------
-
         if group == 3:
 
             bit = operation
 
-            value = self.read_r(
-                register
-            )
+            value = self.read_r(register)
 
             value |= (
                 1 << bit
@@ -1308,8 +1075,6 @@ class Z80:
                 register,
                 value
             )
-
-            return
 
     # ==================================================
     # IX / IY
@@ -1328,6 +1093,16 @@ class Z80:
         )
 
         opcode = self.fetch_byte()
+
+        # DD CB / FD CB
+
+        if opcode == 0xCB:
+
+            self.execute_indexed_cb(
+                prefix
+            )
+
+            return
 
         # LD IX/IY,nn
 
@@ -1397,9 +1172,7 @@ class Z80:
             address = self.fetch_word()
 
             low = self.read_byte(address)
-            high = self.read_byte(
-                address + 1
-            )
+            high = self.read_byte(address + 1)
 
             value = (
                 low |
@@ -1413,18 +1186,11 @@ class Z80:
 
             return
 
-        # Indexed memory instructions
+        # LD (IX+d),n / LD (IY+d),n
 
-        if opcode in (
-            0x36,
-            0x46,
-            0x7E,
-            0x77
-        ):
+        if opcode == 0x36:
 
-            displacement = (
-                self.fetch_byte()
-            )
+            displacement = self.fetch_byte()
 
             if displacement & 0x80:
                 displacement -= 0x100
@@ -1433,33 +1199,66 @@ class Z80:
                 index + displacement
             ) & 0xFFFF
 
-            if opcode == 0x36:
+            value = self.fetch_byte()
 
-                value = self.fetch_byte()
+            self.write_byte(
+                address,
+                value
+            )
 
-                self.write_byte(
-                    address,
-                    value
-                )
+            return
 
-            elif opcode == 0x46:
+        # LD B,(IX+d) / LD B,(IY+d)
 
-                self.b = self.read_byte(
-                    address
-                )
+        if opcode == 0x46:
 
-            elif opcode == 0x7E:
+            displacement = self.fetch_byte()
 
-                self.a = self.read_byte(
-                    address
-                )
+            if displacement & 0x80:
+                displacement -= 0x100
 
-            elif opcode == 0x77:
+            address = (
+                index + displacement
+            ) & 0xFFFF
 
-                self.write_byte(
-                    address,
-                    self.a
-                )
+            self.b = self.read_byte(address)
+
+            return
+
+        # LD A,(IX+d) / LD A,(IY+d)
+
+        if opcode == 0x7E:
+
+            displacement = self.fetch_byte()
+
+            if displacement & 0x80:
+                displacement -= 0x100
+
+            address = (
+                index + displacement
+            ) & 0xFFFF
+
+            self.a = self.read_byte(address)
+
+            return
+
+        # LD (IX+d),A / LD (IY+d),A
+
+        if opcode == 0x77:
+
+            displacement = self.fetch_byte()
+
+            if displacement & 0x80:
+                displacement -= 0x100
+
+            address = (
+                index + displacement
+            ) & 0xFFFF
+
+            self.write_byte(
+                address,
+                self.a
+            )
 
             return
 
@@ -1473,17 +1272,616 @@ class Z80:
         self.running = False
 
     # ==================================================
+    # DD CB / FD CB
+    # ==================================================
+
+    def execute_indexed_cb(self, prefix):
+
+        if prefix == 0xDD:
+
+            index = self.ix
+
+        else:
+
+            index = self.iy
+
+        displacement = self.fetch_byte()
+
+        if displacement & 0x80:
+            displacement -= 0x100
+
+        address = (
+            index + displacement
+        ) & 0xFFFF
+
+        opcode = self.fetch_byte()
+
+        group = (
+            opcode >> 6
+        ) & 3
+
+        operation = (
+            opcode >> 3
+        ) & 7
+
+        # ROTATE / SHIFT
+
+        if group == 0:
+
+            value = self.read_byte(address)
+
+            carry = 0
+
+            if operation == 0:
+
+                carry = (
+                    value >> 7
+                ) & 1
+
+                value = (
+                    (value << 1) |
+                    carry
+                ) & 0xFF
+
+            elif operation == 1:
+
+                carry = value & 1
+
+                value = (
+                    (value >> 1) |
+                    (carry << 7)
+                ) & 0xFF
+
+            elif operation == 2:
+
+                old_carry = int(
+                    self.get_flag(self.FLAG_C)
+                )
+
+                carry = (
+                    value >> 7
+                ) & 1
+
+                value = (
+                    (value << 1) |
+                    old_carry
+                ) & 0xFF
+
+            elif operation == 3:
+
+                old_carry = int(
+                    self.get_flag(self.FLAG_C)
+                )
+
+                carry = value & 1
+
+                value = (
+                    (value >> 1) |
+                    (old_carry << 7)
+                ) & 0xFF
+
+            elif operation == 4:
+
+                carry = (
+                    value >> 7
+                ) & 1
+
+                value = (
+                    value << 1
+                ) & 0xFF
+
+            elif operation == 5:
+
+                carry = value & 1
+
+                value = (
+                    (value >> 1) |
+                    (value & 0x80)
+                ) & 0xFF
+
+            elif operation == 6:
+
+                carry = (
+                    value >> 7
+                ) & 1
+
+                value = (
+                    (value << 1) |
+                    1
+                ) & 0xFF
+
+            elif operation == 7:
+
+                carry = value & 1
+
+                value = (
+                    value >> 1
+                ) & 0xFF
+
+            self.write_byte(
+                address,
+                value
+            )
+
+            self.f = 0
+
+            self.set_flag(
+                self.FLAG_S,
+                bool(value & 0x80)
+            )
+
+            self.set_flag(
+                self.FLAG_Z,
+                value == 0
+            )
+
+            self.set_flag(
+                self.FLAG_PV,
+                self.parity(value)
+            )
+
+            self.set_flag(
+                self.FLAG_C,
+                bool(carry)
+            )
+
+            return
+
+        # BIT
+
+        if group == 1:
+
+            bit = operation
+
+            value = self.read_byte(address)
+
+            tested = (
+                value &
+                (1 << bit)
+            )
+
+            self.set_flag(
+                self.FLAG_Z,
+                tested == 0
+            )
+
+            self.set_flag(
+                self.FLAG_H,
+                True
+            )
+
+            self.set_flag(
+                self.FLAG_N,
+                False
+            )
+
+            self.set_flag(
+                self.FLAG_S,
+                bit == 7 and tested != 0
+            )
+
+            self.set_flag(
+                self.FLAG_PV,
+                tested == 0
+            )
+
+            return
+
+        # RES
+
+        if group == 2:
+
+            bit = operation
+
+            value = self.read_byte(address)
+
+            value &= ~(
+                1 << bit
+            )
+
+            self.write_byte(
+                address,
+                value
+            )
+
+            return
+
+        # SET
+
+        if group == 3:
+
+            bit = operation
+
+            value = self.read_byte(address)
+
+            value |= (
+                1 << bit
+            )
+
+            self.write_byte(
+                address,
+                value
+            )
+
+    # ==================================================
+    # ED HELPERS
+    # ==================================================
+
+    def ed_set_in_flags(self, value):
+
+        value &= 0xFF
+
+        self.set_flag(
+            self.FLAG_S,
+            bool(value & 0x80)
+        )
+
+        self.set_flag(
+            self.FLAG_Z,
+            value == 0
+        )
+
+        self.set_flag(
+            self.FLAG_H,
+            False
+        )
+
+        self.set_flag(
+            self.FLAG_PV,
+            self.parity(value)
+        )
+
+        self.set_flag(
+            self.FLAG_N,
+            False
+        )
+
+    def ed_adc_hl(self, value):
+
+        hl = self.get_hl()
+
+        carry = int(
+            self.get_flag(self.FLAG_C)
+        )
+
+        result = (
+            hl + value + carry
+        )
+
+        result16 = result & 0xFFFF
+
+        self.set_flag(
+            self.FLAG_S,
+            bool(result16 & 0x8000)
+        )
+
+        self.set_flag(
+            self.FLAG_Z,
+            result16 == 0
+        )
+
+        self.set_flag(
+            self.FLAG_H,
+            (
+                (hl & 0x0FFF) +
+                (value & 0x0FFF) +
+                carry
+            ) > 0x0FFF
+        )
+
+        self.set_flag(
+            self.FLAG_PV,
+            bool(
+                (~(hl ^ value) &
+                 (hl ^ result16) &
+                 0x8000)
+            )
+        )
+
+        self.set_flag(
+            self.FLAG_N,
+            False
+        )
+
+        self.set_flag(
+            self.FLAG_C,
+            result > 0xFFFF
+        )
+
+        self.set_hl(result16)
+
+    def ed_sbc_hl(self, value):
+
+        hl = self.get_hl()
+
+        carry = int(
+            self.get_flag(self.FLAG_C)
+        )
+
+        result = (
+            hl - value - carry
+        )
+
+        result16 = result & 0xFFFF
+
+        self.set_flag(
+            self.FLAG_S,
+            bool(result16 & 0x8000)
+        )
+
+        self.set_flag(
+            self.FLAG_Z,
+            result16 == 0
+        )
+
+        self.set_flag(
+            self.FLAG_H,
+            (
+                (hl & 0x0FFF) -
+                (value & 0x0FFF) -
+                carry
+            ) < 0
+        )
+
+        self.set_flag(
+            self.FLAG_PV,
+            bool(
+                ((hl ^ value) &
+                 (hl ^ result16) &
+                 0x8000)
+            )
+        )
+
+        self.set_flag(
+            self.FLAG_N,
+            True
+        )
+
+        self.set_flag(
+            self.FLAG_C,
+            result < 0
+        )
+
+        self.set_hl(result16)
+
+    # ==================================================
     # ED PREFIX
     # ==================================================
 
     def execute_ed(self, opcode):
 
+        # IN r,(C)
+
+        if opcode in (
+            0x40,
+            0x48,
+            0x50,
+            0x58,
+            0x60,
+            0x68,
+            0x70,
+            0x78
+        ):
+
+            value = self.io_read(
+                self.get_bc()
+            )
+
+            register = (
+                (opcode >> 3) & 7
+            )
+
+            if register == 0:
+                self.b = value
+
+            elif register == 1:
+                self.c = value
+
+            elif register == 2:
+                self.d = value
+
+            elif register == 3:
+                self.e = value
+
+            elif register == 4:
+                self.h = value
+
+            elif register == 5:
+                self.l = value
+
+            elif register == 7:
+                self.a = value
+
+            self.ed_set_in_flags(value)
+
+            return
+
+        # OUT (C),r
+
+        if opcode in (
+            0x41,
+            0x49,
+            0x51,
+            0x59,
+            0x61,
+            0x69,
+            0x71,
+            0x79
+        ):
+
+            register = (
+                (opcode >> 3) & 7
+            )
+
+            if register == 0:
+                value = self.b
+
+            elif register == 1:
+                value = self.c
+
+            elif register == 2:
+                value = self.d
+
+            elif register == 3:
+                value = self.e
+
+            elif register == 4:
+                value = self.h
+
+            elif register == 5:
+                value = self.l
+
+            elif register == 6:
+                value = 0
+
+            else:
+                value = self.a
+
+            self.io_write(
+                self.get_bc(),
+                value
+            )
+
+            return
+
+        # SBC HL,rr
+
+        if opcode == 0x42:
+            self.ed_sbc_hl(self.get_bc())
+            return
+
+        if opcode == 0x52:
+            self.ed_sbc_hl(self.get_de())
+            return
+
+        if opcode == 0x62:
+            self.ed_sbc_hl(self.get_hl())
+            return
+
+        if opcode == 0x72:
+            self.ed_sbc_hl(self.sp)
+            return
+
+        # ADC HL,rr
+
+        if opcode == 0x4A:
+            self.ed_adc_hl(self.get_bc())
+            return
+
+        if opcode == 0x5A:
+            self.ed_adc_hl(self.get_de())
+            return
+
+        if opcode == 0x6A:
+            self.ed_adc_hl(self.get_hl())
+            return
+
+        if opcode == 0x7A:
+            self.ed_adc_hl(self.sp)
+            return
+
+        # LD (nn),rr
+
+        if opcode in (
+            0x43,
+            0x53,
+            0x63,
+            0x73
+        ):
+
+            address = self.fetch_word()
+
+            if opcode == 0x43:
+                value = self.get_bc()
+
+            elif opcode == 0x53:
+                value = self.get_de()
+
+            elif opcode == 0x63:
+                value = self.get_hl()
+
+            else:
+                value = self.sp
+
+            self.write_byte(
+                address,
+                value & 0xFF
+            )
+
+            self.write_byte(
+                address + 1,
+                (value >> 8) & 0xFF
+            )
+
+            return
+
+        # LD rr,(nn)
+
+        if opcode in (
+            0x4B,
+            0x5B,
+            0x6B,
+            0x7B
+        ):
+
+            address = self.fetch_word()
+
+            low = self.read_byte(address)
+            high = self.read_byte(
+                address + 1
+            )
+
+            value = (
+                low |
+                (high << 8)
+            )
+
+            if opcode == 0x4B:
+                self.set_bc(value)
+
+            elif opcode == 0x5B:
+                self.set_de(value)
+
+            elif opcode == 0x6B:
+                self.set_hl(value)
+
+            else:
+                self.sp = value
+
+            return
+
+        # NEG
+
+        if opcode in (
+            0x44,
+            0x4C,
+            0x54,
+            0x5C,
+            0x64,
+            0x6C,
+            0x74,
+            0x7C
+        ):
+
+            old_a = self.a
+
+            self.a = self.sub8(
+                0,
+                old_a
+            )
+
+            return
+
         # RETN
 
-        if opcode == 0x45:
+        if opcode in (
+            0x45,
+            0x55,
+            0x65,
+            0x75
+        ):
 
             self.pc = self.pop()
-
             self.iff1 = self.iff2
 
             return
@@ -1498,45 +1896,114 @@ class Z80:
 
         # IM 0
 
-        if opcode == 0x46:
+        if opcode in (
+            0x46,
+            0x4E,
+            0x66,
+            0x6E
+        ):
 
             self.im = 0
-
             return
 
         # IM 1
 
-        if opcode == 0x56:
+        if opcode in (
+            0x56,
+            0x76
+        ):
 
             self.im = 1
-
             return
 
         # IM 2
 
-        if opcode == 0x5E:
+        if opcode in (
+            0x5E,
+            0x7E
+        ):
 
             self.im = 2
+            return
+
+        # LD I,A
+
+        if opcode == 0x47:
+
+            self.i = self.a
 
             return
 
-        # IN A,(C)
+        # LD R,A
 
-        if opcode == 0x78:
+        if opcode == 0x4F:
 
-            self.a = self.io_read(
-                self.get_bc()
+            self.r = self.a & 0x7F
+
+            return
+
+        # LD A,I
+
+        if opcode == 0x57:
+
+            self.a = self.i
+
+            self.set_flag(
+                self.FLAG_S,
+                bool(self.a & 0x80)
+            )
+
+            self.set_flag(
+                self.FLAG_Z,
+                self.a == 0
+            )
+
+            self.set_flag(
+                self.FLAG_H,
+                False
+            )
+
+            self.set_flag(
+                self.FLAG_PV,
+                self.iff2
+            )
+
+            self.set_flag(
+                self.FLAG_N,
+                False
             )
 
             return
 
-        # OUT (C),A
+        # LD A,R
 
-        if opcode == 0x79:
+        if opcode == 0x5F:
 
-            self.io_write(
-                self.get_bc(),
-                self.a
+            self.a = self.r
+
+            self.set_flag(
+                self.FLAG_S,
+                bool(self.a & 0x80)
+            )
+
+            self.set_flag(
+                self.FLAG_Z,
+                self.a == 0
+            )
+
+            self.set_flag(
+                self.FLAG_H,
+                False
+            )
+
+            self.set_flag(
+                self.FLAG_PV,
+                self.iff2
+            )
+
+            self.set_flag(
+                self.FLAG_N,
+                False
             )
 
             return
@@ -1558,9 +2025,7 @@ class Z80:
             self.pc - 1
         ) & 0xFFFF
 
-        opcode = self.read_byte(
-            address
-        )
+        opcode = self.read_byte(address)
 
         print()
         print("=" * 40)
@@ -1626,8 +2091,7 @@ class Z80:
 
         opcode = self.fetch_byte()
 
-        # ED PREFIX
-
+        # ED
         if opcode == 0xED:
 
             self.execute_ed(
@@ -1636,8 +2100,7 @@ class Z80:
 
             return
 
-        # CB PREFIX
-
+        # CB
         if opcode == 0xCB:
 
             self.execute_cb(
@@ -1646,8 +2109,7 @@ class Z80:
 
             return
 
-        # DD PREFIX = IX
-
+        # DD
         if opcode == 0xDD:
 
             self.execute_indexed(
@@ -1656,8 +2118,7 @@ class Z80:
 
             return
 
-        # FD PREFIX = IY
-
+        # FD
         if opcode == 0xFD:
 
             self.execute_indexed(
@@ -1672,8 +2133,17 @@ class Z80:
 
             if opcode != 0x76:
 
-                self.decode_ld_group(
-                    opcode
+                destination = (
+                    (opcode >> 3) & 7
+                )
+
+                source = opcode & 7
+
+                value = self.read_r(source)
+
+                self.write_r(
+                    destination,
+                    value
                 )
 
                 return
@@ -1682,9 +2152,63 @@ class Z80:
 
         if 0x80 <= opcode <= 0xBF:
 
-            self.decode_alu_group(
-                opcode
+            operation = (
+                (opcode >> 3) & 7
             )
+
+            source = opcode & 7
+
+            value = self.read_r(source)
+
+            if operation == 0:
+
+                self.a = self.add8(
+                    self.a,
+                    value
+                )
+
+            elif operation == 1:
+
+                carry = int(
+                    self.get_flag(self.FLAG_C)
+                )
+
+                self.a = self.add8(
+                    self.a,
+                    value,
+                    carry
+                )
+
+            elif operation == 2:
+
+                self.a = self.sub8(
+                    self.a,
+                    value
+                )
+
+            elif operation == 3:
+
+                carry = int(
+                    self.get_flag(self.FLAG_C)
+                )
+
+                self.a = self.sub8(
+                    self.a,
+                    value,
+                    carry
+                )
+
+            elif operation == 4:
+                self.and8(value)
+
+            elif operation == 5:
+                self.xor8(value)
+
+            elif operation == 6:
+                self.or8(value)
+
+            elif operation == 7:
+                self.cp(value)
 
             return
 
@@ -1701,13 +2225,25 @@ class Z80:
             0x3C, 0x3D
         ):
 
-            self.decode_inc_dec(
-                opcode
+            register = (
+                (opcode >> 3) & 7
+            )
+
+            is_dec = opcode & 1
+
+            value = self.read_r(register)
+
+            if is_dec:
+                value = self.dec8(value)
+            else:
+                value = self.inc8(value)
+
+            self.write_r(
+                register,
+                value
             )
 
             return
-
-        # Normal opcode table
 
         handler = self.opcodes[
             opcode
