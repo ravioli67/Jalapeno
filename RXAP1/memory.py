@@ -1,17 +1,34 @@
 class Memory:
+
     def __init__(self, size=65536):
+
         self.size = size
+
         self.data = bytearray(size)
 
     def read(self, address):
-        return self.data[address & 0xFFFF]
+
+        address &= 0xFFFF
+
+        return self.data[address]
 
     def write(self, address, value):
-        self.data[address & 0xFFFF] = value & 0xFF
 
-    def load(self, data, start=0):
-        for i, value in enumerate(data):
-            self.write(start + i, value)
+        address &= 0xFFFF
+
+        self.data[address] = value & 0xFF
+
+    def load(self, program, start_address=0):
+
+        for offset, value in enumerate(program):
+
+            self.write(
+                start_address + offset,
+                value
+            )
 
     def clear(self):
-        self.data = bytearray(self.size)
+
+        self.data = bytearray(
+            self.size
+        )

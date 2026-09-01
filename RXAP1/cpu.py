@@ -29,7 +29,6 @@ class Z80:
         self.h = 0
         self.l = 0
 
-        # Alternate registers
         self.a_alt = 0
         self.f_alt = 0
         self.b_alt = 0
@@ -39,30 +38,24 @@ class Z80:
         self.h_alt = 0
         self.l_alt = 0
 
-        # Index registers
         self.ix = 0
         self.iy = 0
 
-        # Special registers
         self.sp = 0xFFFF
         self.pc = 0
 
         self.i = 0
         self.r = 0
 
-        # Interrupt state
         self.iff1 = False
         self.iff2 = False
         self.im = 0
 
-        # CPU state
         self.halted = False
         self.running = True
 
-        # I/O
         self.ports = {}
 
-        # Opcode table
         self.opcodes = [
             self.op_unimplemented
             for _ in range(256)
@@ -75,13 +68,9 @@ class Z80:
     # ==================================================
 
     def read_byte(self, address):
-
-        return self.memory.read(
-            address & 0xFFFF
-        )
+        return self.memory.read(address & 0xFFFF)
 
     def write_byte(self, address, value):
-
         self.memory.write(
             address & 0xFFFF,
             value & 0xFF
@@ -89,9 +78,7 @@ class Z80:
 
     def fetch_byte(self):
 
-        value = self.read_byte(
-            self.pc
-        )
+        value = self.read_byte(self.pc)
 
         self.pc = (
             self.pc + 1
@@ -116,10 +103,8 @@ class Z80:
 
     def io_read(self, port):
 
-        port &= 0xFFFF
-
         return self.ports.get(
-            port,
+            port & 0xFFFF,
             0xFF
         )
 
@@ -134,7 +119,6 @@ class Z80:
     # ==================================================
 
     def get_bc(self):
-
         return (
             (self.b << 8) |
             self.c
@@ -151,7 +135,6 @@ class Z80:
         self.c = value & 0xFF
 
     def get_de(self):
-
         return (
             (self.d << 8) |
             self.e
@@ -168,7 +151,6 @@ class Z80:
         self.e = value & 0xFF
 
     def get_hl(self):
-
         return (
             (self.h << 8) |
             self.l
@@ -213,10 +195,7 @@ class Z80:
 
     def add8(self, a, b, carry=0):
 
-        result = (
-            a + b + carry
-        )
-
+        result = a + b + carry
         value = result & 0xFF
 
         self.set_flag(
@@ -261,10 +240,7 @@ class Z80:
 
     def sub8(self, a, b, carry=0):
 
-        result = (
-            a - b - carry
-        )
-
+        result = a - b - carry
         value = result & 0xFF
 
         self.set_flag(
@@ -466,14 +442,10 @@ class Z80:
         )
 
     def cp(self, value):
-
-        self.sub8(
-            self.a,
-            value
-        )
+        self.sub8(self.a, value)
 
     # ==================================================
-    # REGISTER DECODER
+    # REGISTERS
     # ==================================================
 
     def read_r(self, code):
@@ -482,24 +454,17 @@ class Z80:
 
         if code == 0:
             return self.b
-
         if code == 1:
             return self.c
-
         if code == 2:
             return self.d
-
         if code == 3:
             return self.e
-
         if code == 4:
             return self.h
-
         if code == 5:
             return self.l
-
         if code == 6:
-
             return self.read_byte(
                 self.get_hl()
             )
@@ -513,34 +478,26 @@ class Z80:
 
         if code == 0:
             self.b = value
-
         elif code == 1:
             self.c = value
-
         elif code == 2:
             self.d = value
-
         elif code == 3:
             self.e = value
-
         elif code == 4:
             self.h = value
-
         elif code == 5:
             self.l = value
-
         elif code == 6:
-
             self.write_byte(
                 self.get_hl(),
                 value
             )
-
         else:
             self.a = value
 
     # ==================================================
-    # OPCODE TABLE
+    # OPCODES
     # ==================================================
 
     def build_opcode_table(self):
@@ -625,19 +582,13 @@ class Z80:
     # ==================================================
 
     def op_ld_bc_nn(self):
-        self.set_bc(
-            self.fetch_word()
-        )
+        self.set_bc(self.fetch_word())
 
     def op_ld_de_nn(self):
-        self.set_de(
-            self.fetch_word()
-        )
+        self.set_de(self.fetch_word())
 
     def op_ld_hl_nn(self):
-        self.set_hl(
-            self.fetch_word()
-        )
+        self.set_hl(self.fetch_word())
 
     def op_ld_sp_nn(self):
         self.sp = self.fetch_word()
@@ -647,7 +598,6 @@ class Z80:
     # ==================================================
 
     def op_jp_nn(self):
-
         self.pc = self.fetch_word()
 
     def op_jr(self):
@@ -700,7 +650,6 @@ class Z80:
         self.pc = address
 
     def op_ret(self):
-
         self.pc = self.pop()
 
     # ==================================================
@@ -731,17 +680,13 @@ class Z80:
 
     def pop(self):
 
-        low = self.read_byte(
-            self.sp
-        )
+        low = self.read_byte(self.sp)
 
         self.sp = (
             self.sp + 1
         ) & 0xFFFF
 
-        high = self.read_byte(
-            self.sp
-        )
+        high = self.read_byte(self.sp)
 
         self.sp = (
             self.sp + 1
@@ -882,7 +827,6 @@ class Z80:
 
         register = opcode & 7
 
-        # ROTATE / SHIFT
         if group == 0:
 
             value = self.read_r(register)
@@ -1003,11 +947,9 @@ class Z80:
 
             return
 
-        # BIT
         if group == 1:
 
             bit = operation
-
             value = self.read_r(register)
 
             tested = (
@@ -1042,11 +984,9 @@ class Z80:
 
             return
 
-        # RES
         if group == 2:
 
             bit = operation
-
             value = self.read_r(register)
 
             value &= ~(
@@ -1060,11 +1000,9 @@ class Z80:
 
             return
 
-        # SET
         if group == 3:
 
             bit = operation
-
             value = self.read_r(register)
 
             value |= (
@@ -1094,17 +1032,11 @@ class Z80:
 
         opcode = self.fetch_byte()
 
-        # DD CB / FD CB
-
         if opcode == 0xCB:
 
-            self.execute_indexed_cb(
-                prefix
-            )
+            self.execute_indexed_cb(prefix)
 
             return
-
-        # LD IX/IY,nn
 
         if opcode == 0x21:
 
@@ -1116,8 +1048,6 @@ class Z80:
                 self.iy = value
 
             return
-
-        # INC IX/IY
 
         if opcode == 0x23:
 
@@ -1132,8 +1062,6 @@ class Z80:
 
             return
 
-        # DEC IX/IY
-
         if opcode == 0x2B:
 
             index = (
@@ -1146,8 +1074,6 @@ class Z80:
                 self.iy = index
 
             return
-
-        # LD (nn),IX/IY
 
         if opcode == 0x22:
 
@@ -1164,8 +1090,6 @@ class Z80:
             )
 
             return
-
-        # LD IX/IY,(nn)
 
         if opcode == 0x2A:
 
@@ -1185,8 +1109,6 @@ class Z80:
                 self.iy = value
 
             return
-
-        # LD (IX+d),n / LD (IY+d),n
 
         if opcode == 0x36:
 
@@ -1208,8 +1130,6 @@ class Z80:
 
             return
 
-        # LD B,(IX+d) / LD B,(IY+d)
-
         if opcode == 0x46:
 
             displacement = self.fetch_byte()
@@ -1225,8 +1145,6 @@ class Z80:
 
             return
 
-        # LD A,(IX+d) / LD A,(IY+d)
-
         if opcode == 0x7E:
 
             displacement = self.fetch_byte()
@@ -1241,8 +1159,6 @@ class Z80:
             self.a = self.read_byte(address)
 
             return
-
-        # LD (IX+d),A / LD (IY+d),A
 
         if opcode == 0x77:
 
@@ -1265,8 +1181,7 @@ class Z80:
         print(
             "Unimplemented "
             f"{'IX' if use_ix else 'IY'} "
-            f"opcode "
-            f"{opcode:02X}"
+            f"opcode {opcode:02X}"
         )
 
         self.running = False
@@ -1278,11 +1193,8 @@ class Z80:
     def execute_indexed_cb(self, prefix):
 
         if prefix == 0xDD:
-
             index = self.ix
-
         else:
-
             index = self.iy
 
         displacement = self.fetch_byte()
@@ -1304,12 +1216,9 @@ class Z80:
             opcode >> 3
         ) & 7
 
-        # ROTATE / SHIFT
-
         if group == 0:
 
             value = self.read_byte(address)
-
             carry = 0
 
             if operation == 0:
@@ -1427,12 +1336,9 @@ class Z80:
 
             return
 
-        # BIT
-
         if group == 1:
 
             bit = operation
-
             value = self.read_byte(address)
 
             tested = (
@@ -1467,12 +1373,9 @@ class Z80:
 
             return
 
-        # RES
-
         if group == 2:
 
             bit = operation
-
             value = self.read_byte(address)
 
             value &= ~(
@@ -1486,12 +1389,9 @@ class Z80:
 
             return
 
-        # SET
-
         if group == 3:
 
             bit = operation
-
             value = self.read_byte(address)
 
             value |= (
@@ -1645,22 +1545,120 @@ class Z80:
         self.set_hl(result16)
 
     # ==================================================
+    # BLOCK INSTRUCTION HELPERS
+    # ==================================================
+
+    def ed_ldi(self, decrement=False):
+
+        hl = self.get_hl()
+        de = self.get_de()
+        bc = self.get_bc()
+
+        value = self.read_byte(hl)
+
+        self.write_byte(
+            de,
+            value
+        )
+
+        if decrement:
+            hl = (
+                hl - 1
+            ) & 0xFFFF
+
+            de = (
+                de - 1
+            ) & 0xFFFF
+
+        else:
+            hl = (
+                hl + 1
+            ) & 0xFFFF
+
+            de = (
+                de + 1
+            ) & 0xFFFF
+
+        bc = (
+            bc - 1
+        ) & 0xFFFF
+
+        self.set_hl(hl)
+        self.set_de(de)
+        self.set_bc(bc)
+
+        self.set_flag(
+            self.FLAG_H,
+            False
+        )
+
+        self.set_flag(
+            self.FLAG_N,
+            False
+        )
+
+        self.set_flag(
+            self.FLAG_PV,
+            bc != 0
+        )
+
+    def ed_cpi(self, decrement=False):
+
+        hl = self.get_hl()
+        bc = self.get_bc()
+
+        value = self.read_byte(hl)
+
+        old_carry = self.get_flag(
+            self.FLAG_C
+        )
+
+        result = self.sub8(
+            self.a,
+            value
+        )
+
+        if decrement:
+            hl = (
+                hl - 1
+            ) & 0xFFFF
+        else:
+            hl = (
+                hl + 1
+            ) & 0xFFFF
+
+        bc = (
+            bc - 1
+        ) & 0xFFFF
+
+        self.set_hl(hl)
+        self.set_bc(bc)
+
+        self.set_flag(
+            self.FLAG_PV,
+            bc != 0
+        )
+
+        self.set_flag(
+            self.FLAG_C,
+            old_carry
+        )
+
+        return result
+
+    # ==================================================
     # ED PREFIX
     # ==================================================
 
     def execute_ed(self, opcode):
 
+        # ----------------------------------------------
         # IN r,(C)
+        # ----------------------------------------------
 
         if opcode in (
-            0x40,
-            0x48,
-            0x50,
-            0x58,
-            0x60,
-            0x68,
-            0x70,
-            0x78
+            0x40, 0x48, 0x50, 0x58,
+            0x60, 0x68, 0x70, 0x78
         ):
 
             value = self.io_read(
@@ -1668,27 +1666,21 @@ class Z80:
             )
 
             register = (
-                (opcode >> 3) & 7
-            )
+                opcode >> 3
+            ) & 7
 
             if register == 0:
                 self.b = value
-
             elif register == 1:
                 self.c = value
-
             elif register == 2:
                 self.d = value
-
             elif register == 3:
                 self.e = value
-
             elif register == 4:
                 self.h = value
-
             elif register == 5:
                 self.l = value
-
             elif register == 7:
                 self.a = value
 
@@ -1696,44 +1688,33 @@ class Z80:
 
             return
 
+        # ----------------------------------------------
         # OUT (C),r
+        # ----------------------------------------------
 
         if opcode in (
-            0x41,
-            0x49,
-            0x51,
-            0x59,
-            0x61,
-            0x69,
-            0x71,
-            0x79
+            0x41, 0x49, 0x51, 0x59,
+            0x61, 0x69, 0x71, 0x79
         ):
 
             register = (
-                (opcode >> 3) & 7
-            )
+                opcode >> 3
+            ) & 7
 
             if register == 0:
                 value = self.b
-
             elif register == 1:
                 value = self.c
-
             elif register == 2:
                 value = self.d
-
             elif register == 3:
                 value = self.e
-
             elif register == 4:
                 value = self.h
-
             elif register == 5:
                 value = self.l
-
             elif register == 6:
                 value = 0
-
             else:
                 value = self.a
 
@@ -1744,7 +1725,9 @@ class Z80:
 
             return
 
+        # ----------------------------------------------
         # SBC HL,rr
+        # ----------------------------------------------
 
         if opcode == 0x42:
             self.ed_sbc_hl(self.get_bc())
@@ -1762,7 +1745,9 @@ class Z80:
             self.ed_sbc_hl(self.sp)
             return
 
+        # ----------------------------------------------
         # ADC HL,rr
+        # ----------------------------------------------
 
         if opcode == 0x4A:
             self.ed_adc_hl(self.get_bc())
@@ -1780,26 +1765,22 @@ class Z80:
             self.ed_adc_hl(self.sp)
             return
 
+        # ----------------------------------------------
         # LD (nn),rr
+        # ----------------------------------------------
 
         if opcode in (
-            0x43,
-            0x53,
-            0x63,
-            0x73
+            0x43, 0x53, 0x63, 0x73
         ):
 
             address = self.fetch_word()
 
             if opcode == 0x43:
                 value = self.get_bc()
-
             elif opcode == 0x53:
                 value = self.get_de()
-
             elif opcode == 0x63:
                 value = self.get_hl()
-
             else:
                 value = self.sp
 
@@ -1815,13 +1796,12 @@ class Z80:
 
             return
 
+        # ----------------------------------------------
         # LD rr,(nn)
+        # ----------------------------------------------
 
         if opcode in (
-            0x4B,
-            0x5B,
-            0x6B,
-            0x7B
+            0x4B, 0x5B, 0x6B, 0x7B
         ):
 
             address = self.fetch_word()
@@ -1838,29 +1818,22 @@ class Z80:
 
             if opcode == 0x4B:
                 self.set_bc(value)
-
             elif opcode == 0x5B:
                 self.set_de(value)
-
             elif opcode == 0x6B:
                 self.set_hl(value)
-
             else:
                 self.sp = value
 
             return
 
+        # ----------------------------------------------
         # NEG
+        # ----------------------------------------------
 
         if opcode in (
-            0x44,
-            0x4C,
-            0x54,
-            0x5C,
-            0x64,
-            0x6C,
-            0x74,
-            0x7C
+            0x44, 0x4C, 0x54, 0x5C,
+            0x64, 0x6C, 0x74, 0x7C
         ):
 
             old_a = self.a
@@ -1872,13 +1845,12 @@ class Z80:
 
             return
 
+        # ----------------------------------------------
         # RETN
+        # ----------------------------------------------
 
         if opcode in (
-            0x45,
-            0x55,
-            0x65,
-            0x75
+            0x45, 0x55, 0x65, 0x75
         ):
 
             self.pc = self.pop()
@@ -1886,7 +1858,9 @@ class Z80:
 
             return
 
+        # ----------------------------------------------
         # RETI
+        # ----------------------------------------------
 
         if opcode == 0x4D:
 
@@ -1894,39 +1868,42 @@ class Z80:
 
             return
 
+        # ----------------------------------------------
         # IM 0
+        # ----------------------------------------------
 
         if opcode in (
-            0x46,
-            0x4E,
-            0x66,
-            0x6E
+            0x46, 0x4E, 0x66, 0x6E
         ):
 
             self.im = 0
             return
 
+        # ----------------------------------------------
         # IM 1
+        # ----------------------------------------------
 
         if opcode in (
-            0x56,
-            0x76
+            0x56, 0x76
         ):
 
             self.im = 1
             return
 
+        # ----------------------------------------------
         # IM 2
+        # ----------------------------------------------
 
         if opcode in (
-            0x5E,
-            0x7E
+            0x5E, 0x7E
         ):
 
             self.im = 2
             return
 
+        # ----------------------------------------------
         # LD I,A
+        # ----------------------------------------------
 
         if opcode == 0x47:
 
@@ -1934,7 +1911,9 @@ class Z80:
 
             return
 
+        # ----------------------------------------------
         # LD R,A
+        # ----------------------------------------------
 
         if opcode == 0x4F:
 
@@ -1942,7 +1921,9 @@ class Z80:
 
             return
 
+        # ----------------------------------------------
         # LD A,I
+        # ----------------------------------------------
 
         if opcode == 0x57:
 
@@ -1975,7 +1956,9 @@ class Z80:
 
             return
 
+        # ----------------------------------------------
         # LD A,R
+        # ----------------------------------------------
 
         if opcode == 0x5F:
 
@@ -2008,6 +1991,116 @@ class Z80:
 
             return
 
+        # ----------------------------------------------
+        # LDI
+        # ----------------------------------------------
+
+        if opcode == 0xA0:
+
+            self.ed_ldi()
+
+            return
+
+        # ----------------------------------------------
+        # LDD
+        # ----------------------------------------------
+
+        if opcode == 0xA8:
+
+            self.ed_ldi(
+                decrement=True
+            )
+
+            return
+
+        # ----------------------------------------------
+        # LDIR
+        # ----------------------------------------------
+
+        if opcode == 0xB0:
+
+            while self.get_bc() != 0:
+
+                self.ed_ldi()
+
+            return
+
+        # ----------------------------------------------
+        # LDDR
+        # ----------------------------------------------
+
+        if opcode == 0xB8:
+
+            while self.get_bc() != 0:
+
+                self.ed_ldi(
+                    decrement=True
+                )
+
+            return
+
+        # ----------------------------------------------
+        # CPI
+        # ----------------------------------------------
+
+        if opcode == 0xA1:
+
+            self.ed_cpi()
+
+            return
+
+        # ----------------------------------------------
+        # CPD
+        # ----------------------------------------------
+
+        if opcode == 0xA9:
+
+            self.ed_cpi(
+                decrement=True
+            )
+
+            return
+
+        # ----------------------------------------------
+        # CPIR
+        # ----------------------------------------------
+
+        if opcode == 0xB1:
+
+            while self.get_bc() != 0:
+
+                self.ed_cpi()
+
+                if self.get_flag(
+                    self.FLAG_Z
+                ):
+                    break
+
+            return
+
+        # ----------------------------------------------
+        # CPDR
+        # ----------------------------------------------
+
+        if opcode == 0xB9:
+
+            while self.get_bc() != 0:
+
+                self.ed_cpi(
+                    decrement=True
+                )
+
+                if self.get_flag(
+                    self.FLAG_Z
+                ):
+                    break
+
+            return
+
+        # ----------------------------------------------
+        # UNKNOWN
+        # ----------------------------------------------
+
         print(
             "Unimplemented ED opcode "
             f"{opcode:02X}"
@@ -2031,57 +2124,21 @@ class Z80:
         print("=" * 40)
         print("UNIMPLEMENTED Z80 OPCODE")
         print("=" * 40)
-
         print(
             f"Opcode:  0x{opcode:02X}"
         )
-
         print(
             f"Address: 0x{address:04X}"
         )
-
         print(
             f"PC:      0x{self.pc:04X}"
         )
-
-        print(
-            f"A:       0x{self.a:02X}"
-        )
-
-        print(
-            f"F:       0x{self.f:02X}"
-        )
-
-        print(
-            f"BC:      0x{self.get_bc():04X}"
-        )
-
-        print(
-            f"DE:      0x{self.get_de():04X}"
-        )
-
-        print(
-            f"HL:      0x{self.get_hl():04X}"
-        )
-
-        print(
-            f"IX:      0x{self.ix:04X}"
-        )
-
-        print(
-            f"IY:      0x{self.iy:04X}"
-        )
-
-        print(
-            f"SP:      0x{self.sp:04X}"
-        )
-
         print("=" * 40)
 
         self.running = False
 
     # ==================================================
-    # CPU STEP
+    # STEP
     # ==================================================
 
     def step(self):
@@ -2091,7 +2148,6 @@ class Z80:
 
         opcode = self.fetch_byte()
 
-        # ED
         if opcode == 0xED:
 
             self.execute_ed(
@@ -2100,7 +2156,6 @@ class Z80:
 
             return
 
-        # CB
         if opcode == 0xCB:
 
             self.execute_cb(
@@ -2109,7 +2164,6 @@ class Z80:
 
             return
 
-        # DD
         if opcode == 0xDD:
 
             self.execute_indexed(
@@ -2118,7 +2172,6 @@ class Z80:
 
             return
 
-        # FD
         if opcode == 0xFD:
 
             self.execute_indexed(
@@ -2134,8 +2187,8 @@ class Z80:
             if opcode != 0x76:
 
                 destination = (
-                    (opcode >> 3) & 7
-                )
+                    opcode >> 3
+                ) & 7
 
                 source = opcode & 7
 
@@ -2153,8 +2206,8 @@ class Z80:
         if 0x80 <= opcode <= 0xBF:
 
             operation = (
-                (opcode >> 3) & 7
-            )
+                opcode >> 3
+            ) & 7
 
             source = opcode & 7
 
@@ -2226,8 +2279,8 @@ class Z80:
         ):
 
             register = (
-                (opcode >> 3) & 7
-            )
+                opcode >> 3
+            ) & 7
 
             is_dec = opcode & 1
 
@@ -2245,9 +2298,7 @@ class Z80:
 
             return
 
-        handler = self.opcodes[
-            opcode
-        ]
+        handler = self.opcodes[opcode]
 
         handler()
 
