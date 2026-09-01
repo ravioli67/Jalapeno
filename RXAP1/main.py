@@ -1,9 +1,15 @@
 from cpu import Z80
-from memory import Memory
+from hardware.memory import Memory
+from hardware.io import IO
 
 
 memory = Memory()
-cpu = Z80(memory)
+io = IO()
+
+cpu = Z80(
+    memory,
+    io
+)
 
 cpu.reset()
 
@@ -23,8 +29,6 @@ data = [
 ]
 
 
-# Put test data into source memory
-
 for i, value in enumerate(data):
 
     memory.write(
@@ -39,13 +43,13 @@ for i, value in enumerate(data):
 
 program = [
 
-    # HL = 0x4000
+    # LD HL,4000
     0x21, 0x00, 0x40,
 
-    # DE = 0x5000
+    # LD DE,5000
     0x11, 0x00, 0x50,
 
-    # BC = 4
+    # LD BC,4
     0x01, 0x04, 0x00,
 
     # LDIR
@@ -67,7 +71,7 @@ memory.load(
 # ==================================================
 
 print("=" * 50)
-print("          Z80 ED BLOCK TEST")
+print("          RXAP1 Z80 TEST")
 print("=" * 50)
 print()
 
