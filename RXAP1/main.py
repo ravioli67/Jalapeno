@@ -1,4 +1,5 @@
 from machine import Computer
+from hardware.bootrom import BOOT_ROM
 
 
 computer = Computer()
@@ -12,22 +13,22 @@ computer.power_on()
 
 
 # ==========================================
-# TEST PROGRAM
+# LOAD BOOT ROM
 # ==========================================
 
-program = [
+computer.load_rom(
+    BOOT_ROM
+)
 
-    # LD HL,4000
-    0x21, 0x00, 0x40,
 
-    # LD DE,5000
-    0x11, 0x00, 0x50,
+# ==========================================
+# RAM PROGRAM
+# ==========================================
 
-    # LD BC,4
-    0x01, 0x04, 0x00,
+ram_program = [
 
-    # LDIR
-    0xED, 0xB0,
+    # LD A,42
+    0x3E, 0x42,
 
     # HALT
     0x76
@@ -35,40 +36,17 @@ program = [
 
 
 # ==========================================
-# TEST DATA
-# ==========================================
-
-source = 0x4000
-destination = 0x5000
-
-data = [
-    0x10,
-    0x20,
-    0x30,
-    0x40
-]
-
-
-for i, value in enumerate(data):
-
-    computer.memory.write(
-        source + i,
-        value
-    )
-
-
-# ==========================================
-# LOAD PROGRAM
+# LOAD RAM PROGRAM
 # ==========================================
 
 computer.load_program(
-    program,
-    0x0000
+    ram_program,
+    0x1000
 )
 
 
 # ==========================================
-# RUN
+# RUN COMPUTER
 # ==========================================
 
 computer.run()
@@ -79,7 +57,7 @@ computer.run()
 # ==========================================
 
 print("=" * 50)
-print("          RXAP1 COMPUTER TEST")
+print("          RXAP1 BOOT TEST")
 print("=" * 50)
 print()
 
@@ -87,42 +65,24 @@ print("CPU HALTED")
 print()
 
 print(
-    "HL =",
-    hex(computer.cpu.get_hl())
-)
-
-print(
-    "DE =",
-    hex(computer.cpu.get_de())
-)
-
-print(
-    "BC =",
-    hex(computer.cpu.get_bc())
-)
-
-print(
-    "F  =",
-    hex(computer.cpu.reg.f)
-)
-
-print(
     "PC =",
     hex(computer.cpu.reg.pc)
 )
 
-print()
+print(
+    "SP =",
+    hex(computer.cpu.reg.sp)
+)
 
-print("Destination:")
+print(
+    "A  =",
+    hex(computer.cpu.reg.a)
+)
 
-print([
-    hex(
-        computer.memory.read(
-            destination + i
-        )
-    )
-    for i in range(4)
-])
+print(
+    "ROM ENABLED =",
+    computer.memory.rom_enabled
+)
 
 print()
 

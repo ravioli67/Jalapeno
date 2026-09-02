@@ -1,6 +1,7 @@
 from cpu import Z80
 from hardware.memory_map import MemoryMap
 from hardware.io import IO
+from hardware.console import Console
 
 
 class Computer:
@@ -12,6 +13,8 @@ class Computer:
         # ==============================
 
         self.memory = MemoryMap()
+
+        self.console = Console()
 
         self.io = IO(self)
 
@@ -40,6 +43,8 @@ class Computer:
         self.memory.clear()
 
         self.io.clear()
+
+        self.console.clear()
 
         self.cpu.reset()
 
@@ -90,6 +95,26 @@ class Computer:
     def enable_rom(self):
 
         self.memory.enable_rom()
+
+
+    # ==================================
+    # CONSOLE INPUT
+    # ==================================
+
+    def send_input(self, text):
+
+        self.console.push_input(
+            text
+        )
+
+
+    # ==================================
+    # CONSOLE OUTPUT
+    # ==================================
+
+    def get_output(self):
+
+        return self.console.get_output()
 
 
     # ==================================
