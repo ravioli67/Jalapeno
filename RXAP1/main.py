@@ -1,22 +1,42 @@
-from cpu import Z80
-from hardware.memory import Memory
-from hardware.io import IO
+from machine import Computer
 
 
-memory = Memory()
-io = IO()
-
-cpu = Z80(
-    memory,
-    io
-)
-
-cpu.reset()
+computer = Computer()
 
 
-# ==================================================
+# ==========================================
+# POWER ON
+# ==========================================
+
+computer.power_on()
+
+
+# ==========================================
+# TEST PROGRAM
+# ==========================================
+
+program = [
+
+    # LD HL,4000
+    0x21, 0x00, 0x40,
+
+    # LD DE,5000
+    0x11, 0x00, 0x50,
+
+    # LD BC,4
+    0x01, 0x04, 0x00,
+
+    # LDIR
+    0xED, 0xB0,
+
+    # HALT
+    0x76
+]
+
+
+# ==========================================
 # TEST DATA
-# ==================================================
+# ==========================================
 
 source = 0x4000
 destination = 0x5000
@@ -31,145 +51,64 @@ data = [
 
 for i, value in enumerate(data):
 
-    memory.write(
+    computer.memory.write(
         source + i,
         value
     )
 
 
-# ==================================================
-# PROGRAM
-# ==================================================
+# ==========================================
+# LOAD PROGRAM
+# ==========================================
 
-program = [
-
-    # ==========================================
-    # SBC HL,BC
-    # ==========================================
-
-    # LD HL,2000
-    0x21, 0x00, 0x20,
-
-    # LD BC,0100
-    0x01, 0x00, 0x01,
-
-    # Clear Carry
-    # XOR A
-    0xAF,
-
-    # SBC HL,BC
-    0xED, 0x42,
-
-
-    # ==========================================
-    # SBC HL,DE
-    # ==========================================
-
-    # LD DE,0020
-    0x11, 0x20, 0x00,
-
-    # SBC HL,DE
-    0xED, 0x52,
-
-
-    # ==========================================
-    # SBC HL,HL
-    # ==========================================
-
-    0xED, 0x62,
-
-
-    # ==========================================
-    # HALT
-    # ==========================================
-
-    0x76
-]
-
-
-memory.load(
+computer.load_program(
     program,
     0x0000
 )
 
 
-# ==================================================
+# ==========================================
 # RUN
-# ==================================================
+# ==========================================
+
+computer.run()
+
+
+# ==========================================
+# RESULTS
+# ==========================================
 
 print("=" * 50)
-print("          RXAP1 Z80 TEST")
+print("          RXAP1 COMPUTER TEST")
 print("=" * 50)
 print()
-
-print("Source:")
-
-print([
-    hex(
-        memory.read(
-            source + i
-        )
-    )
-    for i in range(4)
-])
-
-print()
-
-
-cpu.run()
-
-print("HL =", hex(cpu.get_hl()))
-print("BC =", hex(cpu.get_bc()))
-print("DE =", hex(cpu.get_de()))
-print("SP =", hex(cpu.sp))
-print("F  =", hex(cpu.f))
-
-print("B  =", hex(cpu.b))
-print("C  =", hex(cpu.c))
-print("D  =", hex(cpu.d))
-print("E  =", hex(cpu.e))
-print("A  =", hex(cpu.a))
-print("Memory[4000] =", hex(memory.read(0x4000)))
-
-print("DE =", hex(cpu.get_de()))
-print("HL =", hex(cpu.get_hl()))
-print("BC =", hex(cpu.get_bc()))
-
-print("A  =", hex(cpu.a))
-
-print()
-print("Alternate registers:")
-
-print("BC' =", hex(
-    (cpu.reg.b_alt << 8) | cpu.reg.c_alt
-))
-
-print("DE' =", hex(
-    (cpu.reg.d_alt << 8) | cpu.reg.e_alt
-))
-
-print("HL' =", hex(
-    (cpu.reg.h_alt << 8) | cpu.reg.l_alt
-))
-
-print("A'  =", hex(cpu.reg.a_alt))
 
 print("CPU HALTED")
 print()
 
 print(
     "HL =",
-    hex(cpu.get_hl())
+    hex(computer.cpu.get_hl())
 )
 
 print(
     "DE =",
-    hex(cpu.get_de())
+    hex(computer.cpu.get_de())
 )
 
 print(
     "BC =",
-    hex(cpu.get_bc())
+    hex(computer.cpu.get_bc())
+)
+
+print(
+    "F  =",
+    hex(computer.cpu.reg.f)
+)
+
+print(
+    "PC =",
+    hex(computer.cpu.reg.pc)
 )
 
 print()
@@ -178,7 +117,7 @@ print("Destination:")
 
 print([
     hex(
-        memory.read(
+        computer.memory.read(
             destination + i
         )
     )
@@ -187,15 +126,4 @@ print([
 
 print()
 
-print(
-    "F  =",
-    hex(cpu.f)
-)
-
-print(
-    "PC =",
-    hex(cpu.pc)
-)
-
-print()
 print("=" * 50)

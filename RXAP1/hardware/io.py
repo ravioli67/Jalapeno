@@ -1,7 +1,10 @@
 class IO:
 
-    def __init__(self):
+    ROM_CONTROL_PORT = 0x00
+
+    def __init__(self, computer=None):
         self.ports = {}
+        self.computer = computer
 
     def read(self, port):
 
@@ -18,6 +21,17 @@ class IO:
         value &= 0xFF
 
         self.ports[port] = value
+
+        # ==================================
+        # ROM CONTROL
+        # ==================================
+
+        if port == self.ROM_CONTROL_PORT:
+
+            if value == 0x00:
+
+                if self.computer is not None:
+                    self.computer.disable_rom()
 
     def clear(self):
 

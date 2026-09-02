@@ -1,5 +1,5 @@
 from cpu import Z80
-from hardware.memory import Memory
+from hardware.memory_map import MemoryMap
 from hardware.io import IO
 
 
@@ -11,9 +11,9 @@ class Computer:
         # HARDWARE
         # ==============================
 
-        self.memory = Memory(65536)
+        self.memory = MemoryMap()
 
-        self.io = IO()
+        self.io = IO(self)
 
         # ==============================
         # CPU
@@ -47,7 +47,7 @@ class Computer:
 
 
     # ==================================
-    # LOAD PROGRAM
+    # LOAD RAM PROGRAM
     # ==================================
 
     def load_program(
@@ -60,6 +60,36 @@ class Computer:
             program,
             address
         )
+
+
+    # ==================================
+    # LOAD ROM
+    # ==================================
+
+    def load_rom(
+        self,
+        program,
+        address=0x0000
+    ):
+
+        self.memory.load_rom(
+            program,
+            address
+        )
+
+
+    # ==================================
+    # ROM CONTROL
+    # ==================================
+
+    def disable_rom(self):
+
+        self.memory.disable_rom()
+
+
+    def enable_rom(self):
+
+        self.memory.enable_rom()
 
 
     # ==================================

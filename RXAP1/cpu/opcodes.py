@@ -9,7 +9,6 @@ from .flags import (
     C_FLAG,
 )
 
-
 def execute_opcode(cpu, opcode):
 
     # ==================================================
@@ -140,6 +139,20 @@ def execute_opcode(cpu, opcode):
 
         return
 
+    # ==================================
+    # OUT (n),A
+    # ==================================
+
+    if opcode == 0xD3:
+
+        port = cpu.fetch_byte()
+
+        cpu.io_write(
+            port,
+            cpu.reg.a
+        )
+
+        return
 
     # ==================================================
     # LD r,r'
